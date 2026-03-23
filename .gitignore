@@ -1,0 +1,20 @@
+# Flask
+instance/
+*.pyc
+__pycache__/
+
+# Environment
+.env
+venv/
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

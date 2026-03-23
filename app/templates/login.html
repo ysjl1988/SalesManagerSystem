@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+    <div style="max-width: 980px; margin: 0 auto; padding: 40px 20px;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 48px;">
+            <!-- 左侧说明 -->
+            <div style="max-width: 380px; flex: 1;">
+                <h1 style="font-size: 40px; margin-bottom: 24px; font-weight: 700;">登录到销售管理系统</h1>
+                <div style="margin-bottom: 24px;">
+                    <h3 style="font-size: 18px; margin-bottom: 8px;">安全访问</h3>
+                    <p style="color: #57606a;">使用您的账户安全登录，管理销售数据和用户信息</p>
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <h3 style="font-size: 18px; margin-bottom: 8px;">便捷管理</h3>
+                    <p style="color: #57606a;">快速访问用户管理和销售数据统计功能</p>
+                </div>
+                <div>
+                    <h3 style="font-size: 18px; margin-bottom: 8px;">持续改进</h3>
+                    <p style="color: #57606a;">我们不断优化系统，提供更好的用户体验和功能</p>
+                </div>
+            </div>
+            
+            <!-- 右侧表单 -->
+            <div class="form-container" style="flex: 1; min-width: 300px;">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="form-group">
+                        {{ form.phone.label }}
+                        {{ form.phone(placeholder="请输入手机号") }}
+                        {% for error in form.phone.errors %}
+                            <div style="color: #cf222e; font-size: 12px; margin-top: 4px;">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.password.label }}
+                        {{ form.password(placeholder="请输入密码") }}
+                        {% for error in form.password.errors %}
+                            <div style="color: #cf222e; font-size: 12px; margin-top: 4px;">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.submit(value="登录") }}
+                    </div>
+                    
+                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #d0d7de; text-align: center;">
+                        <p style="color: #57606a;">
+                            还没有账户？
+                            <a href="{{ url_for('register') }}" style="color: #0969da; text-decoration: none; font-weight: 500;">创建账户</a>
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

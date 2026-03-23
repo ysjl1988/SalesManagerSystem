@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+    <div style="max-width: 980px; margin: 0 auto; padding: 40px 20px;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 48px;">
+            <!-- 左侧说明 -->
+            <div style="max-width: 380px; flex: 1;">
+                <h1 style="font-size: 40px; margin-bottom: 24px; font-weight: 700;">创建账户</h1>
+                <div style="margin-bottom: 24px;">
+                    <h3 style="font-size: 18px; margin-bottom: 8px;">安全可靠</h3>
+                    <p style="color: #57606a;">强大的密码验证和会话管理，确保您的账户安全</p>
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <h3 style="font-size: 18px; margin-bottom: 8px;">简单高效</h3>
+                    <p style="color: #57606a;">简洁的界面设计，让您轻松完成注册流程</p>
+                </div>
+                <div>
+                    <h3 style="font-size: 18px; margin-bottom: 8px;">功能完备</h3>
+                    <p style="color: #57606a;">完整的用户管理功能，满足您的业务需求</p>
+                </div>
+            </div>
+            
+            <!-- 右侧表单 -->
+            <div class="form-container" style="flex: 1; min-width: 300px;">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="form-group">
+                        {{ form.phone.label }}
+                        {{ form.phone(placeholder="请输入手机号") }}
+                        {% for error in form.phone.errors %}
+                            <div style="color: #cf222e; font-size: 12px; margin-top: 4px;">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.email.label }}
+                        {{ form.email(placeholder="请输入邮箱地址") }}
+                        {% for error in form.email.errors %}
+                            <div style="color: #cf222e; font-size: 12px; margin-top: 4px;">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.password.label }}
+                        {{ form.password(placeholder="请设置密码") }}
+                        {% for error in form.password.errors %}
+                            <div style="color: #cf222e; font-size: 12px; margin-top: 4px;">{{ error }}</div>
+                        {% endfor %}
+                        <div style="color: #57606a; font-size: 12px; margin-top: 4px;">
+                            密码必须包含大小写字母和数字，长度至少7位
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.submit(value="创建账户") }}
+                    </div>
+                    
+                    <div style="margin-top: 16px; font-size: 12px; color: #57606a; text-align: center;">
+                        点击 "创建账户" 即表示您同意我们的
+                        <a href="#" style="color: #0969da; text-decoration: none;">服务条款</a>
+                        和
+                        <a href="#" style="color: #0969da; text-decoration: none;">隐私政策</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

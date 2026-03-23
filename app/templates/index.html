@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+    {% if not current_user.is_authenticated %}
+        <!-- 未登录时的首页 -->
+        <div style="max-width: 800px; margin: 0 auto; text-align: center; padding: 80px 20px;">
+            <h1 style="font-size: 48px; margin-bottom: 24px; font-weight: 700;">销售管理系统</h1>
+            <p style="font-size: 20px; color: #57606a; margin-bottom: 48px; line-height: 1.6;">
+                一款功能强大的销售管理工具，帮助团队高效管理客户信息、销售数据和团队协作。
+            </p>
+            
+            <!-- 技术栈 -->
+            <div style="margin-bottom: 48px;">
+                <h2 style="font-size: 24px; margin-bottom: 24px;">技术栈</h2>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;">
+                    <div style="padding: 12px 20px; background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de;">
+                        Flask
+                    </div>
+                    <div style="padding: 12px 20px; background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de;">
+                        Python
+                    </div>
+                    <div style="padding: 12px 20px; background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de;">
+                        SQLAlchemy
+                    </div>
+                    <div style="padding: 12px 20px; background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de;">
+                        Bootstrap
+                    </div>
+                    <div style="padding: 12px 20px; background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de;">
+                        SQLite
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 功能亮点 -->
+            <div style="margin-bottom: 48px;">
+                <h2 style="font-size: 24px; margin-bottom: 24px;">功能亮点</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; text-align: left;">
+                    <div style="padding: 24px; background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de;">
+                        <h3 style="font-size: 18px; margin-bottom: 12px;">用户管理</h3>
+                        <p style="color: #57606a;">高效管理用户信息，包括注册时间和最近登录记录</p>
+                    </div>
+                    <div style="padding: 24px; background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de;">
+                        <h3 style="font-size: 18px; margin-bottom: 12px;">安全认证</h3>
+                        <p style="color: #57606a;">强大的密码验证和会话管理，确保数据安全</p>
+                    </div>
+                    <div style="padding: 24px; background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de;">
+                        <h3 style="font-size: 18px; margin-bottom: 12px;">便捷搜索</h3>
+                        <p style="color: #57606a;">支持通过手机号和邮箱快速筛选用户信息</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- CTA按钮 -->
+            <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+                <a href="{{ url_for('register') }}" style="padding: 12px 24px; background-color: #2da44e; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; transition: background-color 0.2s ease;">
+                    立即注册
+                </a>
+                <a href="{{ url_for('login') }}" style="padding: 12px 24px; background-color: #ffffff; color: #24292f; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; border: 1px solid #d0d7de; transition: background-color 0.2s ease;">
+                    已有账号？登录
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <!-- 登录后的首页 -->
+        <div style="max-width: 1200px; margin: 0 auto; padding: 40px 20px;">
+            <h1 style="margin-bottom: 24px;">欢迎回来，{{ current_user.phone }}！</h1>
+            <p style="margin-bottom: 32px;">销售管理系统已准备就绪，开始管理您的用户和数据吧。</p>
+            
+            <!-- 用户统计信息 -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 40px;">
+                <div style="padding: 20px; background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de;">
+                    <h3 style="font-size: 14px; color: #57606a; margin-bottom: 8px;">用户总数</h3>
+                    <p style="font-size: 24px; font-weight: 600;">{{ user_count }}</p>
+                </div>
+            </div>
+            
+            <!-- 快速链接 -->
+            <div style="background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de; padding: 24px;">
+                <h2 style="font-size: 18px; margin-bottom: 16px;">快速操作</h2>
+                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <a href="{{ url_for('user_management') }}" style="padding: 10px 20px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500;">
+                        管理用户
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
