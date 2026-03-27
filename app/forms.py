@@ -16,3 +16,17 @@ class LoginForm(FlaskForm):
     phone = StringField('手机号', validators=[DataRequired(), Length(11, 11)])
     password = PasswordField('密码', validators=[DataRequired()])
     submit = SubmitField('登录')
+
+
+class ChangePasswordForm(FlaskForm):
+    """修改密码表单（用于强制修改密码场景）"""
+    new_password = PasswordField('新密码', validators=[
+        DataRequired(),
+        Length(min=7, max=20, message='密码长度必须大于6位'),
+        Regexp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$', message='密码必须包含大小写字母和数字')
+    ])
+    confirm_password = PasswordField('确认新密码', validators=[
+        DataRequired(),
+        EqualTo('new_password', message='两次输入的密码不一致')
+    ])
+    submit = SubmitField('确认修改')

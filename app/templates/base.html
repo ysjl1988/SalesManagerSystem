@@ -149,6 +149,42 @@
             color: #991b1b;
             border: 1px solid #fecaca;
         }
+        
+        /* 密码输入容器 - 用于密码显示/隐藏切换功能 */
+        .password-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .password-input-wrapper input[type="password"],
+        .password-input-wrapper input[type="text"] {
+            flex: 1;
+            width: auto;
+        }
+        
+        .password-toggle-btn {
+            background: transparent;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            color: #57606a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: color 0.2s ease, background-color 0.2s ease;
+        }
+        
+        .password-toggle-btn:hover {
+            color: #24292f;
+            background-color: #f6f8fa;
+        }
+        
+        .password-toggle-btn svg {
+            width: 20px;
+            height: 20px;
+        }
     </style>
 </head>
 <body>
@@ -161,12 +197,25 @@
                 <nav>
                     <ul>
                         <li><a href="{{ url_for('index') }}">首页</a></li>
-                        {% if current_user.is_authenticated %}
-                        <li><a href="{{ url_for('user_management') }}">用户管理</a></li>
-                        <li><a href="{{ url_for('logout') }}">退出登录</a></li>
+                        {% set current_user_obj = session_manager.get_current_user() %}
+                        {% if current_user_obj %}
+                            {# 已登录 #}
+                            {% if current_user_obj.is_admin() %}
+                            <li><a href="{{ url_for('user_management') }}">用户管理</a></li>
+                            {% endif %}
+                            <li>
+                                <a href="{{ url_for('multi_user_manager') }}" style="color: #2da44e;">
+                                    👤 {{ current_user_obj.phone }} 
+                                    {% if session_manager.get_session_count() > 1 %}
+                                        (+{{ session_manager.get_session_count() - 1 }})
+                                    {% endif %}
+                                </a>
+                            </li>
+                            <li><a href="{{ url_for('logout') }}">退出</a></li>
                         {% else %}
-                        <li><a href="{{ url_for('login') }}">登录</a></li>
-                        <li><a href="{{ url_for('register') }}">注册</a></li>
+                            {# 未登录 #}
+                            <li><a href="{{ url_for('login') }}">登录</a></li>
+                            <li><a href="{{ url_for('register') }}">注册</a></li>
                         {% endif %}
                     </ul>
                 </nav>
@@ -185,5 +234,35 @@
         {% endwith %}
         {% block content %}{% endblock %}
     </div>
+    
+    <script>
+        // 密码显示/隐藏切换功能
+        function togglePasswordVisibility(button) {
+            const targetId = button.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = button.querySelector('.password-toggle-icon');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                // 切换到"眼睛睁开"图标
+                icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+                button.setAttribute('aria-label', '隐藏密码');
+            } else {
+                input.type = 'password';
+                // 切换到"眼睛闭合"图标
+                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+                button.setAttribute('aria-label', '显示密码');
+            }
+        }
+        
+        // 页面加载时自动绑定事件
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.password-toggle-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    togglePasswordVisibility(this);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+    <div style="max-width: 800px; margin: 40px auto; padding: 0 20px;">
+        <h1 style="margin-bottom: 24px;">多用户会话管理</h1>
+        
+        <!-- 当前激活会话 -->
+        <div style="background-color: #ffffff; border-radius: 6px; border: 1px solid #d0d7de; padding: 24px; margin-bottom: 24px;">
+            <h2 style="font-size: 18px; margin-bottom: 16px; color: #24292f;">当前激活会话</h2>
+            
+            {% set current_found = false %}
+            {% for user_session in sessions %}
+                {% if user_session.id == current_session_id %}
+                    {% set current_found = true %}
+                    <div style="display: flex; align-items: center; padding: 16px; background-color: #ddf4ff; border-radius: 6px; border: 1px solid #54aeff;">
+                        <div style="font-size: 32px; margin-right: 16px;">
+                            {% if user_session.user.is_admin() %}
+                                👑
+                            {% else %}
+                                👤
+                            {% endif %}
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; font-size: 16px; color: #24292f;">
+                                {{ user_session.user.phone }}
+                                {% if user_session.user.is_admin() %}
+                                    <span style="color: #0969da; font-size: 12px; margin-left: 8px;">管理员</span>
+                                {% else %}
+                                    <span style="color: #57606a; font-size: 12px; margin-left: 8px;">普通用户</span>
+                                {% endif %}
+                                <span style="color: #1a7f37; font-size: 12px; margin-left: 8px;">当前</span>
+                            </div>
+                            <div style="font-size: 14px; color: #57606a; margin-top: 4px;">
+                                登录时间: {{ user_session.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                            </div>
+                            <div style="font-size: 14px; color: #57606a;">
+                                最后活动: {{ user_session.last_active.strftime('%Y-%m-%d %H:%M:%S') }}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="color: #1a7f37; font-size: 14px; font-weight: 500;">✓ 使用中</span>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+            
+            {% if not current_found %}
+                <div style="text-align: center; padding: 24px; color: #57606a;">
+                    当前没有激活的会话
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- 其他会话 -->
+        <div style="background-color: #ffffff; border-radius: 6px; border: 1px solid #d0d7de; padding: 24px; margin-bottom: 24px;">
+            <h2 style="font-size: 18px; margin-bottom: 16px; color: #24292f;">
+                其他会话
+                <span style="font-size: 14px; color: #57606a; font-weight: normal;">({{ sessions|length - 1 }})</span>
+            </h2>
+            
+            {% set other_exists = false %}
+            {% for user_session in sessions %}
+                {% if user_session.id != current_session_id %}
+                    {% set other_exists = true %}
+                    <div style="display: flex; align-items: center; padding: 16px; background-color: #f6f8fa; border-radius: 6px; margin-bottom: 12px;">
+                        <div style="font-size: 32px; margin-right: 16px;">
+                            {% if user_session.user.is_admin() %}
+                                👑
+                            {% else %}
+                                👤
+                            {% endif %}
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; font-size: 16px; color: #24292f;">
+                                {{ user_session.user.phone }}
+                                {% if user_session.user.is_admin() %}
+                                    <span style="color: #0969da; font-size: 12px; margin-left: 8px;">管理员</span>
+                                {% else %}
+                                    <span style="color: #57606a; font-size: 12px; margin-left: 8px;">普通用户</span>
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 14px; color: #57606a; margin-top: 4px;">
+                                登录时间: {{ user_session.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                            </div>
+                            <div style="font-size: 14px; color: #57606a;">
+                                最后活动: {{ user_session.last_active.strftime('%Y-%m-%d %H:%M:%S') }}
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <a href="{{ url_for('switch_user', session_id=user_session.id) }}" 
+                               style="padding: 6px 12px; background-color: #2da44e; color: #ffffff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">
+                                切换
+                            </a>
+                            <a href="{{ url_for('logout_session', session_id=user_session.id) }}" 
+                               style="padding: 6px 12px; background-color: #cf222e; color: #ffffff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;"
+                               onclick="return confirm('确定要退出此用户吗？');">
+                                退出
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+            
+            {% if not other_exists %}
+                <div style="text-align: center; padding: 24px; color: #57606a; background-color: #f6f8fa; border-radius: 6px;">
+                    没有其他会话<br>
+                    <a href="{{ url_for('login') }}" style="color: #0969da; text-decoration: none;">登录新用户</a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <a href="{{ url_for('login') }}" 
+               style="padding: 10px 20px; background-color: #2da44e; color: #ffffff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">
+                ➕ 登录新用户
+            </a>
+            <a href="{{ url_for('logout_all') }}" 
+               style="padding: 10px 20px; background-color: #cf222e; color: #ffffff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;"
+               onclick="return confirm('确定要退出所有用户吗？');">
+                ⏏️ 退出所有用户
+            </a>
+        </div>
+    </div>
+{% endblock %}

@@ -6,7 +6,7 @@ import os
 
 
 # 测试配置
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def app_context():
     # 设置测试配置
     app.config['TESTING'] = True
@@ -19,12 +19,14 @@ def app_context():
         yield context
         # 清理数据库
         db.drop_all()
+        db.session.remove()
 
 
 # 获取测试数据库会话
-@pytest.fixture
+@pytest.fixture(scope='function')
 def database_session(app_context):
     yield db.session
+    db.session.rollback()
 
 
 # 测试用户创建
@@ -169,3 +171,110 @@ def test_user_properties(database_session):
     # 使用SQLAlchemy查询获取更新后的用户
     updated_user = User.query.get(user.id)
     assert updated_user.last_login_at is not None
+
+
+# ==================== 角色与权限测试 ====================
+
+def test_user_default_role(database_session):
+    """测试新用户默认角色为 USER"""
+    import uuid
+    uid = str(uuid.uuid4())[:8]
+    user = User(
+        phone=f"138{uid}",
+        email=f"test{uid}@example.com",
+        password="Test123456"
+    )
+    database_session.add(user)
+    database_session.commit()
+    
+    assert user.role == 'USER'
+    assert not user.is_admin()
+
+
+def test_admin_role(database_session):
+    """测试管理员角色"""
+    import uuid
+    uid = str(uuid.uuid4())[:8]
+    admin = User(
+        phone=f"139{uid}",
+        email=f"admin{uid}@example.com",
+        password="Zk123456",
+        role='ADMIN'
+    )
+    database_session.add(admin)
+    database_session.commit()
+    
+    assert admin.role == 'ADMIN'
+    assert admin.is_admin()
+
+
+def test_password_reset_required_default(database_session):
+    """测试新用户默认不需要强制修改密码"""
+    import uuid
+    uid = str(uuid.uuid4())[:8]
+    user = User(
+        phone=f"138{uid}",
+        email=f"test{uid}@example.com",
+        password="Test123456"
+    )
+    database_session.add(user)
+    database_session.commit()
+    
+    assert user.password_reset_required is False
+
+
+def test_logical_delete(database_session):
+    """测试逻辑删除功能"""
+    import uuid
+    uid = str(uuid.uuid4())[:8]
+    phone = f"138{uid}"
+    user = User(
+        phone=phone,
+        email=f"test{uid}@example.com",
+        password="Test123456"
+    )
+    database_session.add(user)
+    database_session.commit()
+    
+    # 默认未删除
+    assert user.is_deleted is False
+    
+    # 逻辑删除
+    user.is_deleted = True
+    database_session.commit()
+    
+    # 使用query_active()查询不到已删除用户
+    retrieved = User.query_active().filter_by(phone=phone).first()
+    assert retrieved is None
+    
+    # 使用普通query可以查询到
+    retrieved = User.query.filter_by(phone=phone).first()
+    assert retrieved is not None
+    assert retrieved.is_deleted is True
+
+
+def test_get_by_phone_excludes_deleted(database_session):
+    """测试get_by_phone方法过滤已删除用户"""
+    import uuid
+    uid = str(uuid.uuid4())[:8]
+    phone = f"138{uid}"
+    
+    # 创建用户
+    user = User(
+        phone=phone,
+        email=f"test{uid}@example.com",
+        password="Test123456"
+    )
+    database_session.add(user)
+    database_session.commit()
+    
+    # 可以正常查询到
+    retrieved = User.get_by_phone(phone)
+    assert retrieved is not None
+    
+    # 逻辑删除后查询不到
+    user.is_deleted = True
+    database_session.commit()
+    
+    retrieved = User.get_by_phone(phone)
+    assert retrieved is None
