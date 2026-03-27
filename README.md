@@ -10,7 +10,8 @@
 
 - **框架**: Flask 3.0+
 - **ORM**: Flask-SQLAlchemy
-- **用户认证**: Flask-Login
+- **数据库迁移**: Flask-Migrate
+- **用户认证**: Flask-Login + 自定义会话管理
 - **密码加密**: passlib (pbkdf2\_sha256)
 - **表单验证**: Flask-WTF
 
@@ -38,6 +39,8 @@
 
 - 用户注册 (手机号、邮箱、密码)
 - 用户登录 (手机号、密码)
+- **用户角色管理** (ADMIN/USER 权限控制)
+- **多用户同时登录** (支持浏览器会话隔离)
 - 用户列表查看
 - 退出登录
 
@@ -59,26 +62,32 @@
 ```
 SalesManagerSystem/
 ├── app/
-│   ├── __init__.py          # 应用初始化
-│   ├── routes.py            # 路由定义
+│   ├── __init__.py               # 应用初始化
+│   ├── routes.py                 # 路由定义
+│   ├── session_manager.py        # 多用户会话管理
 │   ├── models/
-│   │   └── user.py          # 用户模型
-│   ├── forms.py             # 表单定义
-│   ├── templates/           # Jinja2模板
-│   │   ├── base.html        # 基础模板
-│   │   ├── index.html       # 首页
-│   │   ├── login.html       # 登录页面
-│   │   ├── register.html    # 注册页面
-│   │   └── user_management.html  # 用户管理页面
-│   └── test/                # 测试目录
-│       ├── test_user.py     # 用户模型单元测试
-│       ├── test_routes.py   # 路由功能单元测试
-│       ├── TEST_REPORT.md   # 单元测试报告
-│       └── uat/             # UAT测试目录
-│           ├── playwright_test.py  # UI自动化测试
-│           ├── pytest.ini   # 测试配置
-│           ├── uat_test_report.html # HTML测试报告
-│           └── UAT_TEST_REPORT.md   # Markdown测试报告
+│   │   ├── user.py               # 用户模型
+│   │   └── session.py            # 会话模型
+│   ├── forms.py                  # 表单定义
+│   ├── templates/                # Jinja2模板
+│   │   ├── base.html             # 基础模板
+│   │   ├── index.html            # 首页
+│   │   ├── login.html            # 登录页面
+│   │   ├── register.html         # 注册页面
+│   │   ├── user_management.html  # 用户管理页面
+│   │   └── change_password.html  # 修改密码页面
+│   └── test/                     # 测试目录
+│       ├── test_user.py                  # 用户模型单元测试
+│       ├── test_routes.py                # 路由功能单元测试
+│       ├── test_multi_user_session.py    # 多用户会话单元测试
+│       ├── test_browser_isolation.py     # 浏览器隔离单元测试
+│       ├── TEST_REPORT.md                # 单元测试报告
+│       └── uat/                          # UAT测试目录
+│           ├── playwright_test.py        # UI自动化测试
+│           ├── test_browser_isolation.py # 浏览器隔离测试
+│           ├── pytest.ini                # 测试配置
+│           ├── uat_test_report.html      # HTML测试报告
+│           └── UAT_TEST_REPORT.md        # Markdown测试报告
 ├── run.py                   # 应用入口
 ├── requirements.txt         # 依赖列表
 ├── README.md                # 项目说明
@@ -149,10 +158,14 @@ SalesManagerSystem/
 
 ### 数据库迁移
 
-使用Flask-Migrate进行数据库迁移（需要额外安装）：
+项目已集成Flask-Migrate，应用启动时会自动执行迁移：
 
 ```bash
-pip install flask-migrate
+# 手动创建迁移（模型变更后）
+flask db migrate -m "迁移说明"
+
+# 手动执行迁移
+flask db upgrade
 ```
 
 ### 配置文件
@@ -169,9 +182,10 @@ pip install flask-migrate
 ## 安全说明
 
 1. **密码安全**：使用pbkdf2\_sha256算法加密存储密码
-2. **会话管理**：使用Flask的会话管理机制
+2. **会话管理**：使用自定义多用户会话管理器，支持浏览器会话隔离
 3. **表单验证**：使用Flask-WTF进行表单验证
 4. **CSRF保护**：默认启用CSRF保护
+5. **角色权限**：基于角色的访问控制 (RBAC)，区分ADMIN和USER权限
 
 ## 许可证
 
@@ -187,4 +201,4 @@ MIT License
 
 ***
 
-**最后更新**: 2026-03-23
+**最后更新**: 2026-03-27
