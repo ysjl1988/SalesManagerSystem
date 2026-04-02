@@ -16,10 +16,14 @@ def index():
     current_user_from_session = session_manager.get_current_user()
     
     # 统计当前浏览器登录的用户数
-    user_count = session_manager.get_session_count()
+    session_count = session_manager.get_session_count()
+    
+    # 统计数据库中的用户总数（不包括已删除的）
+    total_users = User.query_active().count()
     
     return render_template('index.html', 
-                         user_count=user_count,
+                         user_count=total_users,
+                         session_count=session_count,
                          current_user=current_user_from_session,
                          session_manager=session_manager)
 

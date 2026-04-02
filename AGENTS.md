@@ -4,6 +4,48 @@
 
 ---
 
+## ⚠️ 启动必读（每次会话开始前）
+
+每次启动处理本项目任务时，**必须**先阅读以下文档：
+
+### 1. 研发流程与约束规范
+| 文档 | 路径 | 说明 |
+|------|------|------|
+| 需求文档管理看板 | `specify/README.md` | 活跃需求列表、需求状态追踪 |
+| 智能体开发约束规范 | `specify/AGENT_CONSTRAINTS.md` | **5条核心约束**：中文优先、文档先行、文档驱动编码、自动验收、复杂任务分解 |
+
+### 2. 活跃需求文档（specify/active/）
+```
+specify/active/
+├── 001-password-toggle/01-password-toggle-feature.md         # 密码显示/隐藏
+├── 002-user-role-system/02-user-role-system-feature.md       # 用户角色权限
+├── 003-multi-user-login/03-multi-user-login-feature.md       # 多用户登录
+├── 004-database-management/04-database-management-feature.md # 数据库管理
+└── 005-comic-downloader/05-comic-downloader-feature.md       # 漫画下载器
+```
+
+### 3. 文档先行原则
+> **任何需求开发都必须先进行文档编写，经用户确认后再进行编码。**
+
+开发流程：
+```
+用户提出需求
+    ↓
+阅读 specify/AGENT_CONSTRAINTS.md（确保理解约束规范）
+    ↓
+阅读 specify/README.md（了解当前活跃需求）
+    ↓
+创建/更新需求文档（specify/active/XXX-需求名称/）
+    ↓
+与用户讨论确认
+    ↓
+文档定稿，开始编码
+    ↓
+自动生成/更新测试案例并验收
+```
+
+---
+
 ## 项目概述
 
 销售管理系统是一个基于Flask框架开发的Web应用，用于管理销售数据和用户信息。系统目前提供用户注册、登录、用户管理等核心功能，采用现代化的界面设计和安全的用户认证机制。
@@ -13,6 +55,8 @@
 - 用户登录（手机号、密码）
 - 用户列表查看（支持搜索和分页）
 - 退出登录
+- **漫画下载器**（管理员功能）：支持爬取、查看、打包下载漫画
+- **测试漫画网站**：用于测试漫画下载功能的模拟站点
 
 ---
 
@@ -105,6 +149,17 @@ python run.py
 ```
 
 应用将运行在 `http://127.0.0.1:5000`
+
+### 测试漫画网站
+
+项目内置测试漫画网站（集成在Flask应用中）：
+
+- **访问地址**: `http://127.0.0.1:5000/test_comic/`
+- **用途**: 用于测试漫画下载器功能
+- **内容**: 模拟漫画《肉包子打狗一去不回》，共16页
+- **文件位置**: `test_comic_site/` 目录
+
+> 注意：测试漫画网站通过Flask蓝图提供，无需额外启动服务。
 
 ### 默认测试数据
 
@@ -246,11 +301,19 @@ class User(UserMixin, db.Model):
 
 ## 参考文档
 
+### 项目文档
 - `README.md`: 项目说明和使用指南
 - `sequence.md`: 功能调用链路图（Mermaid序列图）
 - `ERROR_SUMMARY.md`: 测试开发错误总结与经验教训
+
+### 测试报告
 - `app/test/TEST_REPORT.md`: 单元测试报告
 - `app/test/uat/UAT_TEST_REPORT.md`: UAT测试报告
+
+### 需求与流程规范（⚠️ 开发前必读）
+- `specify/README.md`: 需求文档管理看板，活跃需求状态追踪
+- `specify/AGENT_CONSTRAINTS.md`: 智能体开发约束规范（5条核心约束）
+- `specify/active/`: 活跃需求详细文档目录
 
 ---
 
@@ -260,4 +323,4 @@ MIT License
 
 ---
 
-**最后更新**: 2026-03-26
+**最后更新**: 2026-04-02

@@ -10,7 +10,7 @@ import requests
 import threading
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
-from app import db
+from app import app, db
 from app.models.comic import Comic, ComicChapter
 
 
@@ -62,73 +62,74 @@ class ComicDownloader:
         """
         下载漫画的主方法（在后台线程中运行）
         """
-        try:
-            comic = Comic.query.get(comic_id)
-            if not comic:
-                return
-            
-            # 更新状态为下载中
-            comic.status = 'downloading'
-            db.session.commit()
-            
-            # 创建漫画文件夹
-            safe_title = self._sanitize_filename(comic.title)
-            comic_folder = os.path.join(self.download_dir, f'{comic_id}_{safe_title}')
-            os.makedirs(comic_folder, exist_ok=True)
-            comic.folder_path = comic_folder.replace('app/static/', '')
-            db.session.commit()
-            
-            # 获取网页内容
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-            response.encoding = response.apparent_encoding or 'utf-8'
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # 尝试提取标题
-            if comic.title == '未命名漫画':
-                title = self._extract_title(soup, url)
-                if title:
-                    comic.title = title
-                    db.session.commit()
-            
-            # 尝试提取描述
-            description = self._extract_description(soup)
-            if description:
-                comic.description = description
+        with app.app_context():
+            try:
+                comic = Comic.query.get(comic_id)
+                if not comic:
+                    return
+                
+                # 更新状态为下载中
+                comic.status = 'downloading'
                 db.session.commit()
-            
-            # 查找章节链接或图片列表
-            chapters = self._find_chapters(soup, url)
-            
-            if chapters:
-                # 按章节下载
-                comic.total_chapters = len(chapters)
+                
+                # 创建漫画文件夹
+                safe_title = self._sanitize_filename(comic.title)
+                comic_folder = os.path.join(self.download_dir, f'{comic_id}_{safe_title}')
+                os.makedirs(comic_folder, exist_ok=True)
+                comic.folder_path = comic_folder.replace('app/static/', '').replace(chr(92), '/')
                 db.session.commit()
-                self._download_by_chapters(comic, chapters, comic_folder)
-            else:
-                # 直接下载所有图片
-                images = self._find_all_images(soup, url)
-                if images:
-                    comic.total_chapters = 1
+                
+                # 获取网页内容
+                response = self.session.get(url, timeout=30)
+                response.raise_for_status()
+                response.encoding = response.apparent_encoding or 'utf-8'
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # 尝试提取标题
+                if comic.title == '未命名漫画':
+                    title = self._extract_title(soup, url)
+                    if title:
+                        comic.title = title
+                        db.session.commit()
+                
+                # 尝试提取描述
+                description = self._extract_description(soup)
+                if description:
+                    comic.description = description
                     db.session.commit()
-                    self._download_as_single_chapter(comic, images, comic_folder)
+                
+                # 查找章节链接或图片列表
+                chapters = self._find_chapters(soup, url)
+                
+                if chapters:
+                    # 按章节下载
+                    comic.total_chapters = len(chapters)
+                    db.session.commit()
+                    self._download_by_chapters(comic, chapters, comic_folder)
                 else:
-                    raise Exception('未找到任何图片')
-            
-            # 下载封面
-            self._download_cover(comic, soup, url)
-            
-            # 更新状态为完成
-            comic.status = 'completed'
-            comic.downloaded_chapters = comic.total_chapters
-            db.session.commit()
-            
-        except Exception as e:
-            print(f'下载漫画失败: {e}')
-            comic = Comic.query.get(comic_id)
-            if comic:
-                comic.status = 'failed'
+                    # 直接下载所有图片
+                    images = self._find_all_images(soup, url)
+                    if images:
+                        comic.total_chapters = 1
+                        db.session.commit()
+                        self._download_as_single_chapter(comic, images, comic_folder)
+                    else:
+                        raise Exception('未找到任何图片')
+                
+                # 下载封面
+                self._download_cover(comic, soup, url)
+                
+                # 更新状态为完成
+                comic.status = 'completed'
+                comic.downloaded_chapters = comic.total_chapters
                 db.session.commit()
+                
+            except Exception as e:
+                print(f'下载漫画失败: {e}')
+                comic = Comic.query.get(comic_id)
+                if comic:
+                    comic.status = 'failed'
+                    db.session.commit()
     
     def _download_by_chapters(self, comic, chapters, comic_folder):
         """按章节下载"""
@@ -412,7 +413,7 @@ class ComicDownloader:
                     full_url = urljoin(base_url, src)
                     comic_folder = os.path.join(self.download_dir, f'{comic.id}_{self._sanitize_filename(comic.title)}')
                     cover_path = self._download_image(full_url, comic_folder, 'cover')
-                    comic.cover_image = cover_path.replace('app/static/', '')
+                    comic.cover_image = cover_path.replace('app/static/', '').replace(chr(92), '/')
                     db.session.commit()
                     
         except Exception as e:

@@ -35,3 +35,7 @@ def inject_session_manager():
 
 from app import routes
 from app import routes_comic
+from app.routes_test_comic import test_comic_bp
+
+# 注册测试漫画蓝图
+app.register_blueprint(test_comic_bp)
