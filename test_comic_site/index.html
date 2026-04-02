@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>肉包子打狗一去不回 - 测试漫画网站</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .comic-header { background: #fff; border-radius: 8px; padding: 30px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .comic-cover { width: 200px; height: 280px; object-fit: cover; border-radius: 8px; float: left; margin-right: 20px; }
+        .comic-info { overflow: hidden; }
+        .comic-title { font-size: 28px; font-weight: bold; margin-bottom: 10px; color: #222; }
+        .comic-desc { color: #666; margin-bottom: 20px; font-size: 14px; }
+        .chapter-section { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #eee; }
+        .chapter-list { list-style: none; }
+        .chapter-item { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; }
+        .chapter-item:hover { background: #f8f8f8; }
+        .chapter-item a { color: #333; text-decoration: none; display: block; }
+        .chapter-item a:hover { color: #e74c3c; }
+        .clearfix::after { content: ""; display: table; clear: both; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="comic-header clearfix">
+            <img src="page_01.jpg" alt="封面" class="comic-cover">
+            <div class="comic-info">
+                <h1 class="comic-title">肉包子打狗一去不回</h1>
+                <p class="comic-desc">
+                    从前，有个小贩在街边卖肉包子，一只流浪狗走了过来...
+                    这是一个温馨有趣的小故事，共16页，讲述了一个关于善良与回报的感人故事。
+                </p>
+            </div>
+        </div>
+        
+        <div class="chapter-section">
+            <h2 class="section-title">章节列表</h2>
+            <ul class="chapter-list">
+                <li class="chapter-item chapter-list-item">
+                    <a href="chapter.html">全一话 - 肉包子打狗一去不回</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

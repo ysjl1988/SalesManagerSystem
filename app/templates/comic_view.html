@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .comic-view {
+        padding: 20px 0;
+    }
+    .back-link {
+        display: inline-block;
+        margin-bottom: 16px;
+        color: #0969da;
+        text-decoration: none;
+    }
+    .back-link:hover {
+        text-decoration: underline;
+    }
+    
+    /* 漫画详情头部 */
+    .comic-header {
+        display: flex;
+        gap: 24px;
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+    .comic-cover-large {
+        width: 200px;
+        height: 280px;
+        background: #e1e4e8;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    .comic-cover-large img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .comic-cover-placeholder {
+        font-size: 64px;
+        color: #d0d7de;
+    }
+    .comic-details {
+        flex: 1;
+    }
+    .comic-title-large {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0 0 12px 0;
+    }
+    .comic-meta-large {
+        color: #6e7781;
+        font-size: 14px;
+        margin-bottom: 16px;
+    }
+    .comic-status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        color: white;
+        margin-left: 8px;
+    }
+    .status-pending { background-color: #6e7781; }
+    .status-downloading { background-color: #0969da; }
+    .status-completed { background-color: #2da44e; }
+    .status-failed { background-color: #cf222e; }
+    .comic-description {
+        color: #24292f;
+        line-height: 1.6;
+        margin-top: 16px;
+    }
+    .comic-actions-header {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+    }
+    .btn-primary {
+        padding: 10px 20px;
+        background-color: #0969da;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .btn-primary:hover {
+        background-color: #0550ae;
+    }
+    .btn-danger {
+        padding: 10px 20px;
+        background-color: #cf222e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .btn-danger:hover {
+        background-color: #a40e26;
+    }
+    
+    /* 章节列表 */
+    .chapters-section {
+        background: white;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        padding: 20px;
+    }
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0 0 16px 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #d0d7de;
+    }
+    .chapters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+    }
+    .chapter-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px;
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        text-decoration: none;
+        color: #24292f;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        text-align: center;
+    }
+    .chapter-item:hover {
+        background: #e1e4e8;
+        border-color: #0969da;
+        color: #0969da;
+    }
+    .chapter-item.downloading {
+        background: #ddf4ff;
+        border-color: #0969da;
+    }
+    .chapter-item.failed {
+        background: #ffebe9;
+        border-color: #cf222e;
+        color: #cf222e;
+    }
+    .chapter-item.pending {
+        opacity: 0.6;
+    }
+    
+    /* 空状态 */
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #6e7781;
+    }
+</style>
+
+<div class="comic-view">
+    <a href="{{ url_for('comic_management') }}" class="back-link">← 返回漫画管理</a>
+    
+    <!-- 漫画详情头部 -->
+    <div class="comic-header">
+        <div class="comic-cover-large">
+            {% if comic.cover_image %}
+            <img src="{{ url_for('static', filename=comic.cover_image) }}" alt="{{ comic.title }}">
+            {% else %}
+            <div class="comic-cover-placeholder">📖</div>
+            {% endif %}
+        </div>
+        <div class="comic-details">
+            <h1 class="comic-title-large">
+                {{ comic.title }}
+                <span class="comic-status-badge status-{{ comic.status }}">
+                    {% if comic.status == 'pending' %}等待中
+                    {% elif comic.status == 'downloading' %}下载中
+                    {% elif comic.status == 'completed' %}已完成
+                    {% elif comic.status == 'failed' %}失败
+                    {% endif %}
+                </span>
+            </h1>
+            <div class="comic-meta-large">
+                <div>📅 添加时间: {{ comic.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                <div>🔗 来源: <a href="{{ comic.url }}" target="_blank" style="color: #0969da;">{{ comic.url[:50] }}{% if comic.url|length > 50 %}...{% endif %}</a></div>
+                <div>📚 章节: {{ comic.downloaded_chapters }} / {{ comic.total_chapters }}</div>
+            </div>
+            {% if comic.description %}
+            <div class="comic-description">
+                {{ comic.description }}
+            </div>
+            {% endif %}
+            <div class="comic-actions-header">
+                {% if chapters %}
+                <a href="{{ url_for('comic_chapter_view', comic_id=comic.id, chapter_id=chapters[0].id) }}" class="btn-primary">
+                    📖 开始阅读
+                </a>
+                {% endif %}
+                <form action="{{ url_for('comic_delete', comic_id=comic.id) }}" method="POST" 
+                      onsubmit="return confirm('确定要删除《{{ comic.title }}》吗？此操作不可恢复。');">
+                    <button type="submit" class="btn-danger">🗑️ 删除漫画</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 章节列表 -->
+    <div class="chapters-section">
+        <h2 class="section-title">📑 章节列表 ({{ chapters|length }}章)</h2>
+        {% if chapters %}
+        <div class="chapters-grid">
+            {% for chapter in chapters %}
+            <a href="{{ url_for('comic_chapter_view', comic_id=comic.id, chapter_id=chapter.id) }}" 
+               class="chapter-item {{ chapter.status }}">
+                <div>
+                    <div>第{{ chapter.chapter_number }}章</div>
+                    {% if chapter.title and chapter.title != '第' + chapter.chapter_number|string + '章' %}
+                    <div style="font-size: 12px; color: #6e7781; margin-top: 4px;">{{ chapter.title[:10] }}{% if chapter.title|length > 10 %}...{% endif %}</div>
+                    {% endif %}
+                    {% if chapter.status == 'downloading' %}
+                    <div style="font-size: 11px; color: #0969da; margin-top: 4px;">⏳ {{ chapter.get_progress() }}%</div>
+                    {% elif chapter.status == 'completed' %}
+                    <div style="font-size: 11px; color: #2da44e; margin-top: 4px;">✓ {{ chapter.page_count }}页</div>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size: 48px; margin-bottom: 12px;">📭</div>
+            <div>暂无章节信息</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

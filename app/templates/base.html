@@ -202,6 +202,7 @@
                             {# 已登录 #}
                             {% if current_user_obj.is_admin() %}
                             <li><a href="{{ url_for('user_management') }}">用户管理</a></li>
+                            <li><a href="{{ url_for('comic_management') }}">📚 漫画管理</a></li>
                             {% endif %}
                             <li>
                                 <a href="{{ url_for('multi_user_manager') }}" style="color: #2da44e;">

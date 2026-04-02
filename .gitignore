@@ -18,3 +18,9 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/SalesManagerSystem.iml
+.idea/vcs.xml

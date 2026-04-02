@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .chapter-view {
+        padding: 20px 0;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    .back-link {
+        display: inline-block;
+        margin-bottom: 16px;
+        color: #0969da;
+        text-decoration: none;
+    }
+    .back-link:hover {
+        text-decoration: underline;
+    }
+    
+    /* 阅读器头部 */
+    .reader-header {
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .reader-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0;
+    }
+    .reader-title small {
+        font-weight: normal;
+        color: #6e7781;
+    }
+    .reader-nav {
+        display: flex;
+        gap: 8px;
+    }
+    .reader-btn {
+        padding: 8px 16px;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        background: white;
+        font-size: 14px;
+        cursor: pointer;
+        text-decoration: none;
+        color: #24292f;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+    .reader-btn:hover:not(:disabled) {
+        background: #f3f4f6;
+        border-color: #0969da;
+        color: #0969da;
+    }
+    .reader-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    .reader-btn-primary {
+        background: #0969da;
+        color: white;
+        border-color: #0969da;
+    }
+    .reader-btn-primary:hover:not(:disabled) {
+        background: #0550ae;
+    }
+    
+    /* 图片列表 */
+    .reader-images {
+        background: #24292f;
+        border-radius: 8px;
+        padding: 20px;
+        min-height: 400px;
+    }
+    .reader-image-container {
+        text-align: center;
+        margin-bottom: 16px;
+    }
+    .reader-image-container:last-child {
+        margin-bottom: 0;
+    }
+    .reader-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .page-number {
+        color: #8c959f;
+        font-size: 14px;
+        margin-top: 8px;
+    }
+    
+    /* 底部导航 */
+    .reader-footer {
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    /* 空状态 */
+    .empty-reader {
+        text-align: center;
+        padding: 60px 20px;
+        color: #8c959f;
+    }
+    .empty-reader-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+    }
+    
+    /* 图片加载动画 */
+    .image-loading {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        border: 3px solid #444c56;
+        border-top-color: #0969da;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+<div class="chapter-view">
+    <a href="{{ url_for('comic_view', comic_id=comic.id) }}" class="back-link">← 返回章节列表</a>
+    
+    <!-- 阅读器头部 -->
+    <div class="reader-header">
+        <div>
+            <h1 class="reader-title">
+                {{ comic.title }}
+                <small> - 第{{ chapter.chapter_number }}章 {% if chapter.title and chapter.title != '第' + chapter.chapter_number|string + '章' %}{{ chapter.title }}{% endif %}</small>
+            </h1>
+        </div>
+        <div class="reader-nav">
+            {% if prev_chapter %}
+            <a href="{{ url_for('comic_chapter_view', comic_id=comic.id, chapter_id=prev_chapter.id) }}" class="reader-btn">
+                ← 上一章
+            </a>
+            {% else %}
+            <button class="reader-btn" disabled>← 上一章</button>
+            {% endif %}
+            
+            <span style="padding: 8px 12px; color: #6e7781; font-size: 14px;">
+                {{ chapter.chapter_number }} / {{ comic.total_chapters }}
+            </span>
+            
+            {% if next_chapter %}
+            <a href="{{ url_for('comic_chapter_view', comic_id=comic.id, chapter_id=next_chapter.id) }}" class="reader-btn reader-btn-primary">
+                下一章 →
+            </a>
+            {% else %}
+            <button class="reader-btn reader-btn-primary" disabled>下一章 →</button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 图片列表 -->
+    <div class="reader-images">
+        {% if images %}
+            {% for image in images %}
+            <div class="reader-image-container">
+                <img src="{{ url_for('static', filename=image) }}" 
+                     alt="第{{ loop.index }}页"
+                     class="reader-image"
+                     loading="lazy"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div class="page-number">第 {{ loop.index }} 页</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-reader">
+                <div class="empty-reader-icon">📭</div>
+                <div>暂无图片内容</div>
+                <div style="font-size: 14px; margin-top: 8px;">
+                    {% if chapter.status == 'downloading' %}
+                    章节正在下载中，请稍后刷新页面
+                    {% elif chapter.status == 'pending' %}
+                    章节等待下载中
+                    {% else %}
+                    该章节没有可显示的图片
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- 底部导航 -->
+    <div class="reader-footer">
+        <a href="{{ url_for('comic_view', comic_id=comic.id) }}" class="reader-btn">
+            📑 章节列表
+        </a>
+        <div class="reader-nav">
+            {% if prev_chapter %}
+            <a href="{{ url_for('comic_chapter_view', comic_id=comic.id, chapter_id=prev_chapter.id) }}" class="reader-btn">
+                ← 上一章
+            </a>
+            {% else %}
+            <button class="reader-btn" disabled>← 上一章</button>
+            {% endif %}
+            
+            {% if next_chapter %}
+            <a href="{{ url_for('comic_chapter_view', comic_id=comic.id, chapter_id=next_chapter.id) }}" class="reader-btn reader-btn-primary">
+                下一章 →
+            </a>
+            {% else %}
+            <button class="reader-btn reader-btn-primary" disabled>下一章 →</button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// 键盘导航
+document.addEventListener('keydown', function(e) {
+    {% if prev_chapter %}
+    if (e.key === 'ArrowLeft') {
+        window.location.href = '{{ url_for('comic_chapter_view', comic_id=comic.id, chapter_id=prev_chapter.id) }}';
+    }
+    {% endif %}
+    {% if next_chapter %}
+    if (e.key === 'ArrowRight') {
+        window.location.href = '{{ url_for('comic_chapter_view', comic_id=comic.id, chapter_id=next_chapter.id) }}';
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

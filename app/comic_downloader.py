@@ -1,0 +1,526 @@
+"""
+漫画下载器模块
+支持自动识别网页中的漫画图片并进行下载
+"""
+
+import os
+import re
+import time
+import requests
+import threading
+from urllib.parse import urljoin, urlparse
+from bs4 import BeautifulSoup
+from app import db
+from app.models.comic import Comic, ComicChapter
+
+
+class ComicDownloader:
+    """漫画下载器类"""
+    
+    # 用户代理
+    HEADERS = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    }
+    
+    # 图片文件扩展名
+    IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
+    
+    def __init__(self, download_dir='app/static/comics'):
+        self.download_dir = download_dir
+        self.session = requests.Session()
+        self.session.headers.update(self.HEADERS)
+        # 确保下载目录存在
+        os.makedirs(self.download_dir, exist_ok=True)
+    
+    def add_download_task(self, url, title=None):
+        """
+        添加下载任务
+        返回 comic_id
+        """
+        # 创建漫画记录
+        comic = Comic(
+            title=title or '未命名漫画',
+            url=url,
+            status='pending'
+        )
+        db.session.add(comic)
+        db.session.commit()
+        
+        # 在后台线程中启动下载
+        thread = threading.Thread(
+            target=self._download_comic,
+            args=(comic.id, url),
+            daemon=True
+        )
+        thread.start()
+        
+        return comic.id
+    
+    def _download_comic(self, comic_id, url):
+        """
+        下载漫画的主方法（在后台线程中运行）
+        """
+        try:
+            comic = Comic.query.get(comic_id)
+            if not comic:
+                return
+            
+            # 更新状态为下载中
+            comic.status = 'downloading'
+            db.session.commit()
+            
+            # 创建漫画文件夹
+            safe_title = self._sanitize_filename(comic.title)
+            comic_folder = os.path.join(self.download_dir, f'{comic_id}_{safe_title}')
+            os.makedirs(comic_folder, exist_ok=True)
+            comic.folder_path = comic_folder.replace('app/static/', '')
+            db.session.commit()
+            
+            # 获取网页内容
+            response = self.session.get(url, timeout=30)
+            response.raise_for_status()
+            response.encoding = response.apparent_encoding or 'utf-8'
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # 尝试提取标题
+            if comic.title == '未命名漫画':
+                title = self._extract_title(soup, url)
+                if title:
+                    comic.title = title
+                    db.session.commit()
+            
+            # 尝试提取描述
+            description = self._extract_description(soup)
+            if description:
+                comic.description = description
+                db.session.commit()
+            
+            # 查找章节链接或图片列表
+            chapters = self._find_chapters(soup, url)
+            
+            if chapters:
+                # 按章节下载
+                comic.total_chapters = len(chapters)
+                db.session.commit()
+                self._download_by_chapters(comic, chapters, comic_folder)
+            else:
+                # 直接下载所有图片
+                images = self._find_all_images(soup, url)
+                if images:
+                    comic.total_chapters = 1
+                    db.session.commit()
+                    self._download_as_single_chapter(comic, images, comic_folder)
+                else:
+                    raise Exception('未找到任何图片')
+            
+            # 下载封面
+            self._download_cover(comic, soup, url)
+            
+            # 更新状态为完成
+            comic.status = 'completed'
+            comic.downloaded_chapters = comic.total_chapters
+            db.session.commit()
+            
+        except Exception as e:
+            print(f'下载漫画失败: {e}')
+            comic = Comic.query.get(comic_id)
+            if comic:
+                comic.status = 'failed'
+                db.session.commit()
+    
+    def _download_by_chapters(self, comic, chapters, comic_folder):
+        """按章节下载"""
+        for idx, chapter_info in enumerate(chapters, 1):
+            try:
+                chapter = ComicChapter(
+                    comic_id=comic.id,
+                    chapter_number=idx,
+                    title=chapter_info.get('title', f'第{idx}章'),
+                    status='downloading',
+                    source_url=chapter_info.get('url')
+                )
+                db.session.add(chapter)
+                db.session.commit()
+                
+                # 创建章节文件夹
+                chapter_folder = os.path.join(comic_folder, f'chapter_{idx:03d}')
+                os.makedirs(chapter_folder, exist_ok=True)
+                chapter.folder_path = chapter_folder.replace('app/static/', '')
+                db.session.commit()
+                
+                # 获取章节页面
+                chapter_url = chapter_info.get('url')
+                if chapter_url:
+                    images = self._get_chapter_images(chapter_url)
+                    chapter.page_count = len(images)
+                    db.session.commit()
+                    
+                    # 下载图片
+                    for page_idx, img_url in enumerate(images, 1):
+                        try:
+                            self._download_image(img_url, chapter_folder, f'{page_idx:03d}')
+                            chapter.downloaded_pages += 1
+                            db.session.commit()
+                        except Exception as e:
+                            print(f'下载图片失败 {img_url}: {e}')
+                
+                chapter.status = 'completed'
+                db.session.commit()
+                
+                # 更新漫画进度
+                comic.downloaded_chapters += 1
+                db.session.commit()
+                
+            except Exception as e:
+                print(f'下载章节失败: {e}')
+                if chapter:
+                    chapter.status = 'failed'
+                    db.session.commit()
+    
+    def _download_as_single_chapter(self, comic, images, comic_folder):
+        """作为单章节下载（没有明确章节划分时）"""
+        try:
+            chapter = ComicChapter(
+                comic_id=comic.id,
+                chapter_number=1,
+                title='全部内容',
+                status='downloading',
+                page_count=len(images)
+            )
+            db.session.add(chapter)
+            db.session.commit()
+            
+            chapter_folder = os.path.join(comic_folder, 'chapter_001')
+            os.makedirs(chapter_folder, exist_ok=True)
+            chapter.folder_path = chapter_folder.replace('app/static/', '')
+            db.session.commit()
+            
+            # 下载所有图片
+            for page_idx, img_url in enumerate(images, 1):
+                try:
+                    self._download_image(img_url, chapter_folder, f'{page_idx:03d}')
+                    chapter.downloaded_pages += 1
+                    db.session.commit()
+                except Exception as e:
+                    print(f'下载图片失败 {img_url}: {e}')
+            
+            chapter.status = 'completed'
+            db.session.commit()
+            
+            comic.downloaded_chapters = 1
+            db.session.commit()
+            
+        except Exception as e:
+            print(f'下载单章节失败: {e}')
+            if chapter:
+                chapter.status = 'failed'
+                db.session.commit()
+    
+    def _get_chapter_images(self, chapter_url):
+        """获取章节页面的所有图片"""
+        try:
+            response = self.session.get(chapter_url, timeout=30)
+            response.raise_for_status()
+            response.encoding = response.apparent_encoding or 'utf-8'
+            soup = BeautifulSoup(response.text, 'html.parser')
+            return self._find_all_images(soup, chapter_url)
+        except Exception as e:
+            print(f'获取章节图片失败: {e}')
+            return []
+    
+    def _find_chapters(self, soup, base_url):
+        """
+        查找章节列表
+        支持常见的章节列表结构
+        """
+        chapters = []
+        
+        # 尝试多种常见的章节列表选择器
+        chapter_selectors = [
+            # 常见的章节列表结构
+            '.chapter-list a', '.chapter-item a', '.chapter a',
+            '.episode-list a', '.episode a', '.volume-list a',
+            '.comic-chapter a', '.list-chapter a', '.chapter-box a',
+            # 更通用的选择器
+            'a[href*="chapter"]', 'a[href*="episode"]',
+            'ul li a', '.content a', '#chapter-list a',
+        ]
+        
+        seen_urls = set()
+        for selector in chapter_selectors:
+            links = soup.select(selector)
+            for link in links:
+                href = link.get('href')
+                if not href:
+                    continue
+                
+                # 转换为绝对URL
+                full_url = urljoin(base_url, href)
+                
+                # 跳过重复和外部链接
+                if full_url in seen_urls:
+                    continue
+                
+                parsed_base = urlparse(base_url)
+                parsed_url = urlparse(full_url)
+                
+                if parsed_base.netloc != parsed_url.netloc:
+                    continue
+                
+                title = link.get_text(strip=True)
+                if title and len(title) < 100:  # 过滤掉过长的文本
+                    seen_urls.add(full_url)
+                    chapters.append({
+                        'url': full_url,
+                        'title': title
+                    })
+        
+        # 去重并按章节顺序排序（尝试）
+        chapters = list({c['url']: c for c in chapters}.values())
+        
+        # 如果找到太多章节，可能是误判，限制数量
+        if len(chapters) > 500:
+            chapters = chapters[:500]
+        
+        return chapters
+    
+    def _find_all_images(self, soup, base_url):
+        """
+        查找页面中的所有漫画图片
+        """
+        images = []
+        seen_urls = set()
+        
+        # 查找所有图片标签
+        for img in soup.find_all('img'):
+            src = img.get('data-src') or img.get('src') or img.get('data-original')
+            if not src:
+                continue
+            
+            # 转换为绝对URL
+            full_url = urljoin(base_url, src)
+            
+            # 跳过重复
+            if full_url in seen_urls:
+                continue
+            
+            # 检查是否是图片URL
+            parsed = urlparse(full_url)
+            path = parsed.path.lower()
+            
+            # 过滤掉非图片链接和小图标
+            if any(path.endswith(ext) for ext in self.IMAGE_EXTENSIONS):
+                # 过滤广告图片（根据常见广告图片特征）
+                if self._is_likely_comic_image(img, full_url):
+                    seen_urls.add(full_url)
+                    images.append(full_url)
+        
+        return images
+    
+    def _is_likely_comic_image(self, img_tag, img_url):
+        """
+        判断图片是否可能是漫画内容（而非广告或图标）
+        """
+        # 检查图片尺寸（如果有的话）
+        width = img_tag.get('width')
+        height = img_tag.get('height')
+        
+        if width and height:
+            try:
+                w, h = int(width), int(height)
+                # 漫画图片通常较大
+                if w < 100 or h < 100:
+                    return False
+            except:
+                pass
+        
+        # 检查URL中是否包含广告相关关键词
+        ad_keywords = ['ad', 'ads', 'advert', 'banner', 'logo', 'icon', 'button']
+        url_lower = img_url.lower()
+        for keyword in ad_keywords:
+            if keyword in url_lower:
+                return False
+        
+        return True
+    
+    def _download_image(self, img_url, save_folder, filename):
+        """
+        下载单张图片
+        """
+        try:
+            response = self.session.get(img_url, timeout=30, stream=True)
+            response.raise_for_status()
+            
+            # 确定文件扩展名
+            content_type = response.headers.get('content-type', '')
+            if 'jpeg' in content_type or 'jpg' in content_type:
+                ext = '.jpg'
+            elif 'png' in content_type:
+                ext = '.png'
+            elif 'gif' in content_type:
+                ext = '.gif'
+            elif 'webp' in content_type:
+                ext = '.webp'
+            else:
+                # 从URL获取扩展名
+                parsed = urlparse(img_url)
+                path = parsed.path.lower()
+                ext = os.path.splitext(path)[1] or '.jpg'
+            
+            filepath = os.path.join(save_folder, f'{filename}{ext}')
+            
+            with open(filepath, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            
+            return filepath
+            
+        except Exception as e:
+            print(f'下载图片失败 {img_url}: {e}')
+            raise
+    
+    def _download_cover(self, comic, soup, base_url):
+        """
+        下载漫画封面
+        """
+        try:
+            # 尝试找到封面图片
+            cover_img = None
+            
+            # 常见的封面选择器
+            cover_selectors = [
+                '.comic-cover img', '.cover img', '.thumbnail img',
+                '.poster img', '.comic-thumb img', '.book-cover img'
+            ]
+            
+            for selector in cover_selectors:
+                img = soup.select_one(selector)
+                if img:
+                    cover_img = img
+                    break
+            
+            # 如果没有找到，使用第一张图片
+            if not cover_img:
+                cover_img = soup.find('img')
+            
+            if cover_img:
+                src = cover_img.get('data-src') or cover_img.get('src') or cover_img.get('data-original')
+                if src:
+                    full_url = urljoin(base_url, src)
+                    comic_folder = os.path.join(self.download_dir, f'{comic.id}_{self._sanitize_filename(comic.title)}')
+                    cover_path = self._download_image(full_url, comic_folder, 'cover')
+                    comic.cover_image = cover_path.replace('app/static/', '')
+                    db.session.commit()
+                    
+        except Exception as e:
+            print(f'下载封面失败: {e}')
+    
+    def _extract_title(self, soup, url):
+        """
+        从网页中提取标题
+        """
+        # 尝试多种方式获取标题
+        # 1. title标签
+        title_tag = soup.find('title')
+        if title_tag:
+            title = title_tag.get_text(strip=True)
+            # 清理标题（移除常见后缀）
+            title = re.sub(r'[\-_\|].*$', '', title).strip()
+            if title:
+                return title
+        
+        # 2. h1标签
+        h1 = soup.find('h1')
+        if h1:
+            return h1.get_text(strip=True)
+        
+        # 3. 常见的标题class
+        title_selectors = [
+            '.comic-title', '.book-title', '.manga-title',
+            '.title', '.comic-name', '.book-name'
+        ]
+        
+        for selector in title_selectors:
+            elem = soup.select_one(selector)
+            if elem:
+                return elem.get_text(strip=True)
+        
+        # 4. 从URL中提取
+        parsed = urlparse(url)
+        path = parsed.path.strip('/')
+        if path:
+            last_segment = path.split('/')[-1]
+            # 替换连线和下划线为空格
+            title = re.sub(r'[-_]', ' ', last_segment).strip()
+            if title:
+                return title.title()
+        
+        return None
+    
+    def _extract_description(self, soup):
+        """
+        提取漫画描述
+        """
+        desc_selectors = [
+            '.comic-desc', '.description', '.summary', '.intro',
+            '.comic-summary', '.book-desc', '.manga-desc'
+        ]
+        
+        for selector in desc_selectors:
+            elem = soup.select_one(selector)
+            if elem:
+                desc = elem.get_text(strip=True)
+                if desc and len(desc) > 10:
+                    return desc[:500]  # 限制长度
+        
+        # 尝试meta description
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        if meta_desc:
+            return meta_desc.get('content', '')[:500]
+        
+        return None
+    
+    def _sanitize_filename(self, filename):
+        """
+        清理文件名，移除非法字符
+        """
+        # 移除或替换非法字符
+        filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+        filename = filename.strip('. ')
+        # 限制长度
+        if len(filename) > 100:
+            filename = filename[:100]
+        return filename or 'unnamed'
+    
+    def delete_comic(self, comic_id):
+        """
+        删除漫画及其下载的文件
+        """
+        comic = Comic.query.get(comic_id)
+        if not comic:
+            return False
+        
+        try:
+            # 删除文件夹
+            if comic.folder_path:
+                full_path = os.path.join('app/static', comic.folder_path)
+                if os.path.exists(full_path):
+                    import shutil
+                    shutil.rmtree(full_path)
+            
+            # 删除数据库记录
+            db.session.delete(comic)
+            db.session.commit()
+            return True
+            
+        except Exception as e:
+            print(f'删除漫画失败: {e}')
+            db.session.rollback()
+            return False
+
+
+# 全局下载器实例
+downloader = ComicDownloader()

@@ -34,3 +34,4 @@ def inject_session_manager():
     return dict(session_manager=get_session_manager())
 
 from app import routes
+from app import routes_comic

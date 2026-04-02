@@ -5,3 +5,6 @@ Flask-Login
 Flask-Migrate
 WTForms
 passlib
+requests
+beautifulsoup4
+lxml
