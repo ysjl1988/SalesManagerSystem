@@ -24,3 +24,4 @@ Thumbs.db
 .idea/modules.xml
 .idea/SalesManagerSystem.iml
 .idea/vcs.xml
+/app/static/comics

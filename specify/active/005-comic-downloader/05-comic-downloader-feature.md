@@ -3,7 +3,7 @@
 > **需求编号**: 005  
 > **需求名称**: 漫画下载管理功能  
 > **创建日期**: 2026-04-02  
-> **当前状态**: 编码完成待测试  
+> **当前状态**: 文档更新中 - 添加Cloudflare网站支持  
 > **关联需求**: 002-用户角色与权限管理（依赖管理员权限）
 
 ---
@@ -54,6 +54,7 @@
 | AC4 | 漫画查看 | 下载完成后可正常查看章节和图片 | P0 |
 | AC5 | 删除功能 | 删除漫画后本地文件被清理 | P0 |
 | AC6 | 筛选搜索 | 筛选和搜索功能正常工作 | P1 |
+| AC7 | Cloudflare网站 | 支持下载Cloudflare保护的网站 | P1 |
 
 ---
 
@@ -106,6 +107,7 @@
 ### 2.2 技术选型
 - **网页解析**: BeautifulSoup4 + lxml
 - **HTTP请求**: requests（支持session保持）
+- **Cloudflare绕过**: Playwright（用于JS挑战网站）
 - **图片下载**: 流式下载（chunk）
 - **后台任务**: Python threading
 - **数据库**: SQLite（现有）
@@ -175,6 +177,14 @@ app/
   - `_find_all_images()`: 提取页面图片
   - `_download_image()`: 单图片下载
   - `delete_comic()`: 删除漫画及文件
+  - `_fetch_with_playwright()`: 使用浏览器绕过Cloudflare
+
+#### 3.1.5 特殊网站支持
+| 网站类型 | 处理方式 | 说明 |
+|----------|----------|------|
+| 普通网站 | requests | 直接HTTP请求 |
+| Cloudflare保护 | Playwright | 使用浏览器自动化绕过JS挑战 |
+| 18comic等 | Playwright | 需要年龄验证+浏览器访问 |
 
 #### 3.1.3 路由 (app/routes_comic.py)
 | 路由 | 方法 | 功能 |
